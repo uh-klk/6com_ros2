@@ -18,7 +18,7 @@ class ManipulatorControllerClient(Node):
         while not self.client.wait_for_service(timeout_sec=1.0):
             self.get_logger().info('Service not available, waiting again...')
 
-    def send_request(self, command, position, position_list, obj_id):
+    def send_request(self, command, position, position_list):
         # Create a new request with the integers to be added
         req = ManipulatorControl.Request()
         req.command = command
@@ -34,16 +34,13 @@ class ManipulatorControllerClient(Node):
             waypoint.y = float(position_list[i][1])
             waypoint.z = float(position_list[i][2])
             waypoints.append(waypoint) 
-            print(position_list[i], waypoint, waypoints) 
         req.waypoints = waypoints
-        req.obj_id = obj_id
-
         
         # Example Service Call from the terminal
-        # ros2 run my_manipulator_controller manipulator_controller_client "follow" [1,2,3] [[1,1,1],[2,2,2]] "apple_1" 
+        # ros2 run my_manipulator_controller manipulator_controller_client "follow" [[1,1,1],[2,2,2]]
 
-        print(req, "\n")
-        # my_manipulator_interfaces.srv.ManipulatorControl_Request(command='move', position=geometry_msgs.msg.Point(x=1.0, y=1.0, z=1.0), waypoints=[geometry_msgs.msg.Point(x=2.0, y=2.0, z=2.0), geometry_msgs.msg.Point(x=3.0, y=3.0, z=3.0)], obj_id='apple_1')
+        #print(req, "\n")
+        # my_manipulator_interfaces.srv.ManipulatorControl_Request(command='move', position=geometry_msgs.msg.Point(x=1.0, y=1.0, z=1.0), waypoints=[geometry_msgs.msg.Point(x=2.0, y=2.0, z=2.0), geometry_msgs.msg.Point(x=3.0, y=3.0, z=3.0)]')
 
         # Async call to the service
         self.future = self.client.call_async(req)
@@ -57,51 +54,40 @@ def main(args=None):
         cmd = sys.argv[1]
         position = [0.0, 0.0, 0.0]
         position_list = [[0.0, 0.0, 0.0]]
-        obj_id = ''
         match cmd:
             case 'grasp': # request the gripper to grasp
-                if len(sys.argv) == 3:
-                    try:
-                        obj_id = ast.literal_eval(sys.argv[2]) # use ast.literal_eval to evaluate the string containing a Python literal (like a list, dict, int, float, string, tuple, etc.) and returns the corresponding Python object
-                    except (ValueError, SyntaxError) as e:
-                        print(f"Error type: {type(e).__name__}")
-                        print(f"Message: {e}")
-                        print('Type issue, Usage: ... manipulator_controller_client "grasp" "\'<obj_id>\'"')
-                        sys.exit(1)
-                    print(f"Request gripper to grasp {obj_id}.")
-                else:
-                    print('Missing argument, Usage: ... manipulator_controller_client "grasp" "<obj_id>"')
-                    sys.exit(1)
+                print(f"Request gripper to close.")
 
             case 'release': # request the gripper to release an object
-                print(f"Request gripper to release/open.")
-                sys.exit(1)
-            
+                print(f"Request gripper to open.")
+                
             case 'move': # request the gripper to move to a position
                 if len(sys.argv) == 3:
                     try:
                         position = ast.literal_eval(sys.argv[2]) # use ast.literal_eval to evaluate the string containing a Python literal (like a list, dict, int, float, string, tuple, etc.) and returns the corresponding Python object
+                        #print(validate_coordinate(position))
                     except ValueError:
-                        print('Type issue, Usage: ... manipulator_controller_client "move" [<float>,<float>,<float>]')
+                        print('Type issue, Usage: ... manipulator_controller_client move [<float>,<float>,<float>]')
                         sys.exit(1)
-                    print(f"Request gripper moving to position ({position[0]}, {position[1]}, {position[2]}).")
                 else:
-                    print('Missing argument, Usage: ... manipulator_controller_client "move" [<float>,<float>,<float>]')
+                    print('Missing argument, Usage: ... manipulator_controller_client move [<float>,<float>,<float>]')
                     sys.exit(1)
+                print(f"Request gripper moving to position ({position[0]}, {position[1]}, {position[2]}).")
 
             case 'follow': # request the gripper to follow a path (i.e., waypoints)
                 if len(sys.argv) == 3:
                     try:
                         position_list  = ast.literal_eval(sys.argv[2]) # use ast.literal_eval to evaluate the string containing a Python literal (like a list, dict, int, float, string, tuple, etc.) and returns the corresponding Python object
                     except ValueError:
-                        print('Type issue, Usage: ... manipulator_controller_client "follow" [ [<float>,<float>,<float>], [<float>,<float>,<float>], ...]')
+                        print('Type issue, Usage: ... manipulator_controller_client follow [[<float>,<float>,<float>],[<float>,<float>,<float>],...]')
                         sys.exit(1)
-                    print("Request gripper to follow the following waypoints")
-                    for i in range(len(position_list)):
-                        print(f"going to waypoint {i} ({position_list[i][0]}, {position_list[i][1]}, {position_list[i][2]}) ...")
                 else:
-                    print('Missing argument, Usage: ... manipulator_controller_client "follow" [ [<float>,<float>,<float>], [<float>,<float>,<float>], ...]')
+                    print('Missing argument, Usage: ... manipulator_controller_client follow [[<float>,<float>,<float>],[<float>,<float>,<float>],...]')
                     sys.exit(1)
+                print("Request gripper to follow the following waypoints...")
+                for i in range(len(position_list)):
+                    print(f"\tgoing to waypoint {i} ({position_list[i][0]}, {position_list[i][1]}, {position_list[i][2]}) ...")
+
             case   _:
                 status = 'failed'
                 message = 'Unsupported action! Supported commands are move, follow, grasp or release.'
@@ -111,7 +97,7 @@ def main(args=None):
         # Create an instance of the service client
         client = ManipulatorControllerClient()
         # Send a request with the provided integers
-        client.send_request(cmd, position, position_list, obj_id)
+        client.send_request(cmd, position, position_list)
         # Wait for the response from the service server
         while rclpy.ok():
             rclpy.spin_once(client)
@@ -121,10 +107,14 @@ def main(args=None):
                 except Exception as e:
                     client.get_logger().info('Service call failed %r' % (e,))
                 else:
-                    client.get_logger().info(f'Result of manipulator_control:{response.status} {response.message}\n')
+                    client.get_logger().info(f'\nResult of manipulator_control:{response.status}')
+                    client.get_logger().info(f'\n{response.message}\n')
                 break
     else:
-        print('Usage: ... manipulator_controller_client <str> [<float>,<float>,<float>] [[<float>,<float>,<float>],...] <str>')
+        print('Usage: ... manipulator_controller_client grasp   <str>')
+        print('Usage: ... manipulator_controller_client release <str>')
+        print('Usage: ... manipulator_controller_client move    [<float>,<float>,<float>] ') #no space between elements nor brackets
+        print('Usage: ... manipulator_controller_client follow  [[<float>,<float>,<float>],...]') #no space between elements nor brackets
         sys.exit(1)
 
     # Shutdown the ROS client library

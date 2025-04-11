@@ -23,7 +23,7 @@ class ManipulatorControllerServer(Node):
         
         # Example Service Call from the terminal
         #   ros2 service call /manipulator_control my_manipulator_interfaces/srv/ManipulatorControl "{command: 'move', position: {x: 1.0, y: 1.0, z: 1.0}, waypoints: [{x: 2.0, y: 2.0, z: 2.0}, {x: 3.0, y: 3.0, z: 3.0}], obj_id: 'apple_1'}"
-        print(request)
+        #print(request)
         # my_manipulator_interfaces.srv.ManipulatorControl_Request(command='move', position=geometry_msgs.msg.Point(x=1.0, y=1.0, z=1.0), waypoints=[geometry_msgs.msg.Point(x=2.0, y=2.0, z=2.0), geometry_msgs.msg.Point(x=3.0, y=3.0, z=3.0)], obj_id='apple_1')
 
         match request.command:
@@ -37,27 +37,27 @@ class ManipulatorControllerServer(Node):
                 print("Gripper closing ...")
                 print("Gripper state: closed.\n")
                 status = 'success'
-                message = request.obj_id + ' has been grasped'
+                message = 'Gripper has been closed.'
 
             case 'release': # request the gripper to release an object
                 print("Gripper openining ...")
                 print("Gripper state: open.\n")
                 status = 'success'
-                message = request.obj_id + ' has been released' 
+                message = 'Gripper has been opened.' 
             
             case 'follow': # request the gripper to follow a path (i.e., waypoints)
                 print("Following waypoints")
                 for i in range(len(request.waypoints)):
-                    print(f"going to waypoint {i} ({request.waypoints[i].x}, {request.waypoints[i].y}, {request.waypoints[i].z}) ...")
+                    print(f"\tgoing to waypoint {i} ({request.waypoints[i].x}, {request.waypoints[i].y}, {request.waypoints[i].z}) ...")
 
                 print(f"Arrived at final waypoint ({request.waypoints[i].x}, {request.waypoints[i].y}, {request.waypoints[i].z}).\n")
 
                 status = 'success'
-                message = 'Successfully following ' + str(request.waypoints) + ' path'
+                message = 'Successfully following ' + str(request.waypoints) + ' waypoints'
 
             case   _:
                 status = 'failed'
-                message = 'Unsupported action! Supported commands are move,f ollow, grasp or release.'
+                message = 'Unsupported action! Supported commands are move, follow, grasp or release.'
                 print(message)
 
         response.status = status
@@ -78,7 +78,9 @@ def main(args=None):
 
     # Spin the node so the callback function is called.
     # This will keep your service server alive and responsive to incoming service requests.
+    print('manipulator controller is starting up ....')
     rclpy.spin(server)
+    print('manipulator controller is shuting down ....')
 
     # Shutdown the ROS client library before exiting the program
     rclpy.shutdown()
