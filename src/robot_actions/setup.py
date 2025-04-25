@@ -22,6 +22,9 @@ setup(
         'console_scripts': [
             'robot_action_server=robot_actions.robot_action_server:main',
             'robot_action_client=robot_actions.robot_action_client:main',
+            'ra_server_challange=robot_actions.robot_action_server_challenge:main',
+            'ra_client_challange=robot_actions.robot_action_client_challenge:main',
+
         ],
     },
 )
